@@ -1,0 +1,258 @@
+[#global-hub-importing-managed-hub-which-has-local-cluster-enabled]
+= Importing a managed hub cluster which has local-cluster enabled
+
+To import a managed hub cluster which has local-cluster enabled. You must importing it as hosted mode and disable policy and application related addons in cluster namespace. Complete the following steps: 
+
+## Update addons namespace
+Only need to run the step 1 and step 2 once after gloablhub installed.
+
+1. Create AddOnDeploymentConfig in globalhub cluster
+
+```shell
+cat <<EOF | oc apply -f -
+apiVersion: addon.open-cluster-management.io/v1alpha1
+kind: AddOnDeploymentConfig
+metadata:
+  name: global-hub
+  namespace: multicluster-global-hub
+spec:
+  agentInstallNamespace: open-cluster-management-global-hub-agent-addon
+EOF
+```
+
+2. Update the existing ClusterManagementAddOn resources in globalhub cluster for these addons so that the addons pick up the new installation namespace from the AddOnDeploymentConfig resource we created.
+
+Before the update, ClusterManagementAddOn for work-manager addon should look like this.
+```yaml
+apiVersion: addon.open-cluster-management.io/v1alpha1
+kind: ClusterManagementAddOn
+metadata:
+  name: work-manager
+spec:
+  addOnMeta:
+    displayName: work-manager
+  installStrategy:
+    placements:
+    - name: global
+      namespace: open-cluster-management-global-set
+      rolloutStrategy:
+        type: All
+    type: Placements
+```
+
+2.1 Update ClusterManagementAddOn for work-manager addon to add a reference to the AddOnDeploymentConfig resource created in the previous step.
+```yaml
+apiVersion: addon.open-cluster-management.io/v1alpha1
+kind: ClusterManagementAddOn
+metadata:
+  name: work-manager
+spec:
+  addOnMeta:
+    displayName: work-manager
+  installStrategy:
+    placements:
+    - name: global
+      namespace: open-cluster-management-global-set
+      rolloutStrategy:
+        type: All
+      configs:
+      - group: addon.open-cluster-management.io
+        name: global-hub
+        namespace: multicluster-global-hub
+        resource: addondeploymentconfigs
+    type: Placements
+```
+
+2.2 Do the same update for managed-serviceaccount addon.
+```yaml
+apiVersion: addon.open-cluster-management.io/v1alpha1
+kind: ClusterManagementAddOn
+metadata:
+  name: managed-serviceaccount
+spec:
+  addOnMeta:
+    displayName: managed-serviceaccount
+  installStrategy:
+    placements:
+    - name: global
+      namespace: open-cluster-management-global-set
+      rolloutStrategy:
+        type: All
+      configs:
+      - group: addon.open-cluster-management.io
+        name: global-hub
+        namespace: multicluster-global-hub
+        resource: addondeploymentconfigs
+    type: Placements
+```
+2.3 Do the same update for cluster-proxy addon.
+```yaml
+apiVersion: addon.open-cluster-management.io/v1alpha1
+kind: ClusterManagementAddOn
+metadata:
+  name: cluster-proxy
+spec:
+  addOnMeta:
+    displayName: cluster-proxy
+  installStrategy:
+    placements:
+    - name: global
+      namespace: open-cluster-management-global-set
+      rolloutStrategy:
+        type: All
+      configs:
+      - group: addon.open-cluster-management.io
+        name: global-hub
+        namespace: multicluster-global-hub
+        resource: addondeploymentconfigs
+    type: Placements
+```
+2.4 Once you make these changes in globalhub, you will notice that these addons for ACM's local-cluster are re-installed into the specified namespace.
+```sh
+% oc get deployment -n open-cluster-management-global-hub-agent-addon
+NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
+cluster-proxy-proxy-agent            1/1     1            1           24h
+klusterlet-addon-workmgr             1/1     1            1           24h
+managed-serviceaccount-addon-agent   1/1     1            1           24h
+```
+## Import a managedhub cluster with hosted mode using console
+When imporing a managedhub cluster using console, please Click the `YAML` button, and change the `Managedcluster` and `KlusterletAddonConfig` as following.
+
+```yaml
+apiVersion: cluster.open-cluster-management.io/v1
+kind: ManagedCluster
+metadata:
+  name: <Cluster Name>
+  labels:
+    name: <Cluster Name>
+    cloud: auto-detect
+    vendor: auto-detect
+  annotations:
+    import.open-cluster-management.io/klusterlet-deploy-mode: Hosted
+    import.open-cluster-management.io/hosting-cluster-name: local-cluster
+spec:
+  hubAcceptsClient: true
+---
+apiVersion: agent.open-cluster-management.io/v1
+kind: KlusterletAddonConfig
+metadata:
+  name: <Cluster Name>
+  namespace: <Cluster Name>
+spec:
+  clusterName: <Cluster Name>
+  clusterNamespace: <Cluster Name>
+  clusterLabels:
+    name: <Cluster Name>
+    cloud: auto-detect
+    vendor: auto-detect
+  applicationManager:
+    enabled: false
+  policyController:
+    enabled: false
+  searchCollector:
+    enabled: true
+  certPolicyController:
+    enabled: false
+```
+There are two things changed:
+1. Add two annotations `import.open-cluster-management.io/klusterlet-deploy-mode: Hosted` and `import.open-cluster-management.io/hosting-cluster-name: local-cluster` for ManagedCluster
+2. Set `enabled: false` for `applicationManager` `policyController` and `certPolicyController` in KlusterletAddonConfig
+
+After Import sucess, you could see the cluster status is Ready, and in `Add-ons` page, the following addons listed, and there status ares `Available`.
+```
+cluster-proxy
+managed-serviceaccount
+search-collector
+work-manager
+```
+
+## Import a managedhub cluster with hosted mode by using the CLI
+1 Create the managedcluster namespace
+
+```sh
+oc create ns <Cluster Name>
+```
+2 Create `KlusterletAddonConfig` and disable Policy and Application related addons
+```sh
+oc apply -f - <<EOF
+apiVersion: agent.open-cluster-management.io/v1
+kind: KlusterletAddonConfig
+metadata:
+  name: <Cluster Name>
+  namespace: <Cluster Name>
+spec:
+  clusterName: <Cluster Name>
+  clusterNamespace: <Cluster Name>
+  clusterLabels:
+    name: <Cluster Name>
+    cloud: auto-detect
+    vendor: auto-detect
+  applicationManager:
+    enabled: false
+  policyController:
+    enabled: false
+  searchCollector:
+    enabled: true
+  certPolicyController:
+    enabled: false
+EOF
+```
+Important: The `applicationManager` `policyController` `certPolicyController` addons must be disabled. If not, they will conflict with managedhub cluster local-cluster related addons.
+
+3 Create a ManagedCluster on the hub with 2 annotations
+```yaml
+oc apply -f - <<EOF
+apiVersion: cluster.open-cluster-management.io/v1
+kind: ManagedCluster
+metadata:
+  name: <Cluster Name>
+  labels:
+    name: <Cluster Name>
+    cloud: auto-detect
+    vendor: auto-detect
+  annotations:
+    import.open-cluster-management.io/klusterlet-deploy-mode: Hosted
+    import.open-cluster-management.io/hosting-cluster-name: local-cluster
+spec:
+  hubAcceptsClient: true
+EOF
+```
+4 Create the auto-import-secret in <Cluster Name> namespace
+Follow https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes/2.10/html-single/clusters/index#importing-clusters-auto-import-secret to create the auto-import secret to complete the ACM auto-import process. 
+
+5 Check the managedhub cluster import success
+
+5.1 Once the auto import secret is created in the <Cluster Name> namespace in the ACM cluster, the managed hub cluster gets registered and you should see the managed hub cluster status like this.
+```sh
+% oc get managedcluster
+NAME            HUB ACCEPTED   MANAGED CLUSTER URLS                                         JOINED   AVAILABLE   AGE
+local-cluster   true           https://api.acm-hub-hs-aws.dev09.red-chesterfield.com:6443   True     True        44h
+mh1           true           https://api.clc-hs-mh.dev09.red-chesterfield.com:6443     True     True        27s
+```
+5.2 The klusterlet agent running in klusterlet-<Cluster Name> namespace in globalhub cluster.
+```sh
+% oc get pod -n klusterlet-mh1
+NAME                                    READY   STATUS    RESTARTS   AGE
+klusterlet-mh1-agent-84c59fd988-jfpw8   1/1     Running   0         30s
+```
+5.3 The Addons status should be like this.
+```sh
+% oc get managedclusteraddon -n mh1
+NAME                                 AVAILABLE   DEGRADED   PROGRESSING
+cluster-proxy                        True                   False
+managed-serviceaccount               True                   False
+multicluster-global-hub-controller   True                   False
+search-collector                     True                   False
+work-manager                         True                   False
+```
+
+## Backup and restore consideration
+
+When the ACM hub is restored in a disaster recovery scenario, the imported MCE clusters and the hosted clusters are going to be imported into the new ACM hub. The above configurations need to be restored as part of ACM hub restore by adding the backup label to those resources.
+
+```sh
+oc label addondeploymentconfig global-hub -n multicluster-global-hub cluster.open-cluster-management.io/backup=true
+oc label clustermanagementaddon work-manager cluster.open-cluster-management.io/backup=true
+oc label clustermanagementaddon cluster-proxy cluster.open-cluster-management.io/backup=true
+oc label clustermanagementaddon managed-serviceaccount cluster.open-cluster-management.io/backup=true
+```
