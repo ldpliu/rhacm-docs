@@ -1,19 +1,20 @@
 [#global-hub-install-acm]
-= Installing {global-hub} on an existing {acm-short} hub cluster (Technology Preview)
+= Installing {global-hub} on an existing {acm-short} hub cluster
 
-When you create the `MultiClusterGlobalHub` custom resource (CR), you must set the `installAgentOnLocal` field to `true`. The `installAgentOnLocal` field determines if you can deploy {global-hub}  on an existing  {acm-short} hub cluster.  
+You can install {global-hub} in an existing {acm-short} hub cluster, and enable the {global-hub} agent in the {acm-short}. 
+with this:
+- All the clusters, policies, and events in this {acm-short} will be sent to Kafka and then stored in the globalhub database.
+- Since the events will be sent to Kafka, other components can easily consume the events in Kafka, e.g., integration with [Red Hat Advanced Cluster Security](https://github.com/stolostron/stolostron/tree/main/dev-preview#global-hub-integration-with-red-hat-advanced-cluster-security) or EDA integration.
+- Since the data will be stored in the globalhub database, you can view cluster and policy information in Grafana dashboards.
 
-Before you create `MultiClusterGlobalHub` custom resource (CR), you must complete the following procedures: 
 
+
+[#global-hub-install-operator-prerequisites]
+== Prerequisites
 * xref:../global_hub/global_hub_install_connected.adoc#global-hub-install-connected[Installing Multicluster Global Hub in a connected environment]
 * xref:../global_hub/global_hub_install_disconnected.adoc#global-hub-install-disconnected[Installing Multicluster Global Hub in a disconnected environment]
 
-To install {global-hub} on an existing {acm-short} hub cluster, complete the following steps:
-
-. Install a {global-hub} operator from the `OperatorHub`. 
-. In the {ocp} console, create a `MultiClusterGlobalHub` CR. 
-. Apply the `MultiClusterGlobalHub` CR to your {global-hub} operator.
-. Set the `installAgentOnLocal` field to `true` by applying the following YAML sample: 
+To install {global-hub} on an existing {acm-short} hub cluster, you must set the `installAgentOnLocal` field to `true` by applying the following YAML sample: 
 
 +
 [source,yaml]
@@ -38,3 +39,5 @@ spec:
 
 The {global-hub} agent is now automatically installed on an existing {acm-short} hub cluster. 
 
+Notes:
+  If you enabled MultiCluster Observability in the {acm-short}, after the {globalhub} installed, any new update for `MultiClusterObservability` will not take effect.
