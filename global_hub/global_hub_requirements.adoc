@@ -45,8 +45,6 @@ See the following networking requirements:
 
 * You can see guidelines for sizing at link:../install/cluster_size.adoc#sizing-your-cluster[Sizing your {acm-short} cluster] in the product documentation.
 
-* *Optional:* For middleware, {global-hub} has built-in Kafka, PostgreSQL, and Grafana, but you can use your own configured Kafka, PostgreSQL, and Grafana. See xref:../global_hub/global_hub_components.adoc#global-hub-integrating-existing-components[Integrating existing components] for more details.
-
 [#gh-supported-components]
 == Supported components
 
@@ -67,11 +65,18 @@ Learn about supported platforms and components.
 |{acm-short} on IBM Power Systems | Yes | Yes
 |===
 
-* The {global-hub} supports the following middleware:
+* {global-hub} has built-in Kafka, PostgreSQL, and Grafana
 
-** Kafka 3.8 and later 3.8.x releases.
++
+|===
+|Middleware | Build In Version
 
-** PostgreSQL version 16 and later 16.x releases.
+|amq-streams (Kafka) | 2.9.x (3.9.0)
+|PostgreSQL | 16 
+|Grafana | 2.12.0 
+|===
+
+* You can use your own configured Kafka, PostgreSQL, and Grafana. The components version should not less than build in components. See xref:../global_hub/global_hub_components.adoc#global-hub-integrating-existing-components[Integrating existing components] for more details.
 
 [#gh-req-additional-resources]
 == Additional resources

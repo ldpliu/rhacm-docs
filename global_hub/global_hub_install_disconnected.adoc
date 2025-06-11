@@ -111,6 +111,22 @@ oc -n openshift-marketplace get packagemanifests
 +
 The list that is displayed should include entries showing that the `multicluster-global-hub-operator-rh` and `amq-streams` packages are supplied by the catalog source for your mirror catalog:
 
+. To change build in amq-strimzi catalog source by setting the following annotation to Globalhub Custom Resource.
++
+[source,yaml]
+----
+apiVersion: operator.open-cluster-management.io/v1alpha4
+kind: MulticlusterGlobalHub
+metadata:
+  annotations:
+    global-hub.open-cluster-management.io/strimzi-catalog-source-name: redhat-operators
+    global-hub.open-cluster-management.io/strimzi-catalog-source-namespace: openshift-marketplace
+    global-hub.open-cluster-management.io/strimzi-subscription-package-name: amq-streams
+    global-hub.open-cluster-management.io/strimzi-subscription-channel: amq-streams-2.9.x
+  name: multiclusterglobalhub
+spec:
+  ......
+----
 
 [#global-hub-installing-disconnected-config-image-registry]
 == Configuring the image registry
